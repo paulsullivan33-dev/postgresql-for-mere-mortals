@@ -1,0 +1,132 @@
+PostgreSQL commands — the everyday set from
+"PostgreSQL for Mere Mortals"
+====================================================================
+
+Every output quoted in the guide was captured
+from PostgreSQL 16.15 (Ubuntu package) on the
+build machine, against the lab cluster:
+port 5433, its own data directory, created
+with pg_createcluster and never the packaged
+cluster on 5432. The -p 5433 below is what
+keeps every command talking to the lab.
+
+Connecting (three sign-ins the guide uses):
+    psql -h 127.0.0.1 -p 5433 -U librarian -d seedlib
+                                as the owner, password prompt
+                                (TCP, scram + TLS by default)
+    sudo -u postgres psql -p 5433
+                                as the superuser (peer auth
+                                on the local socket)
+    psql -h 127.0.0.1 -p 5433 -U reader -d seedlib
+                                as the unprivileged role
+
+
+CLUSTERS
+--------
+    pg_lsclusters               every cluster, port, state
+    pg_createcluster 16 lab --port=5433
+                                a new cluster of your own
+    pg_ctlcluster 16 lab start  start it (stop likewise)
+    pg_isready -h 127.0.0.1 -p 5433
+                                is it accepting connections?
+
+
+ROLES AND DATABASES (as the superuser)
+--------------------------------------
+    CREATE ROLE name LOGIN PASSWORD '...';
+    CREATE DATABASE name OWNER rolename;
+    \du                         list roles          (in psql)
+    \l                          list databases      (in psql)
+
+
+PSQL'S OWN COMMANDS (meta-commands)
+-----------------------------------
+    \conninfo                   where this connection landed
+    \dn                         schemas
+    \dt                         tables in this database
+    \d members                  one table, in full detail
+    \timing                     print each statement's time
+    SELECT current_user, current_database();
+                                the SQL version of "where am I?"
+
+
+TABLES AND RULES (schema.sql)
+-----------------------------
+    CREATE TABLE t (
+        id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        name text NOT NULL,
+        email text NOT NULL UNIQUE,
+        n integer NOT NULL CHECK (n >= 0),
+        other_id integer REFERENCES others (id)
+    );
+    -- every constraint answers bad data with an
+    -- ERROR and a DETAIL line. Read the DETAIL.
+
+
+ASKING QUESTIONS (seed-data.sql, queries.sql)
+---------------------------------------------
+    TRUNCATE a, b RESTART IDENTITY CASCADE;
+                                fixture loader's reset
+    INSERT INTO t (cols) VALUES (...), (...);
+    SELECT ... FROM t WHERE ... ORDER BY ...;
+    SELECT ... FROM a JOIN b ON b.id = a.b_id ...;
+    SELECT key, count(*) FROM t GROUP BY key;
+    SELECT ... FROM a LEFT JOIN b
+           ON ... ;             count(b.id) keeps the zeros
+
+
+TRANSACTIONS
+------------
+    BEGIN; ... COMMIT;          all of it lands
+    BEGIN; ... ROLLBACK;        none of it happened
+    -- after any error inside: everything is refused
+    -- ("current transaction is aborted") until ROLLBACK
+
+
+INDEXES (big-table.sql)
+-----------------------
+    CREATE INDEX name ON t (column);
+    VACUUM ANALYZE t;           statistics + visibility;
+                                skipping this is why indexes
+                                "don't help"
+    EXPLAIN ANALYZE SELECT ...; the plan, with real timings
+                                Seq Scan = read everything
+                                Index Only Scan + Heap
+                                Fetches: 0 = answered from
+                                the index alone
+
+
+PERMISSIONS
+-----------
+    GRANT SELECT ON members TO reader;
+                                one action, one table, one role
+    REVOKE SELECT ON members FROM reader;
+                                the mirror (named in ch. 7)
+    -- default for a new role: connect, and nothing else.
+    -- "permission denied for table X" is that default
+    -- introducing itself.
+
+
+BACKUP AND RESTORE
+------------------
+    pg_dump -h 127.0.0.1 -p 5433 -U librarian \
+            -d seedlib -f seedlib-dump.sql
+                                the database as one script
+    DROP DATABASE seedlib;      (as superuser, from
+    CREATE DATABASE seedlib     another database)
+           OWNER librarian;
+    psql -h 127.0.0.1 -p 5433 -U librarian \
+         -d seedlib -f seedlib-dump.sql
+                                replay = restore
+    -- prove it: row counts and checksums, before
+    -- and after, must be identical (ch. 8)
+
+
+THE SERVER ITSELF
+-----------------
+    SHOW port;  SHOW data_directory;
+    SHOW listen_addresses;  SHOW max_connections;
+                                settings in force — trust
+                                these over the config file
+    SELECT pg_size_pretty(pg_database_size('seedlib'));
+    tail /var/log/postgresql/postgresql-16-lab.log

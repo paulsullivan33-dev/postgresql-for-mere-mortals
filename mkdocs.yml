@@ -1,0 +1,24 @@
+site_name: PostgreSQL for Mere Mortals
+site_description: Plain-language PostgreSQL. A real database server on a throwaway lab cluster — tables whose constraints refuse bad rows on the record, transactions rolled back and committed, an index measured on half a million rows, permissions denied then granted, and a full dump, drop, and restore with the checksums compared.
+site_url: https://paulsullivan33-dev.github.io/postgresql-for-mere-mortals/
+
+# Guides live at the repo root (nice for GitHub browsing).
+# The deploy workflow copies them into docs/ before building.
+theme:
+  name: material
+
+nav:
+  - Home: index.md
+  - What PostgreSQL Is: what-postgresql-is.md
+  - "Roles, Databases, and psql": roles-databases-and-psql.md
+  - Tables and Constraints: tables-and-constraints.md
+  - Querying: querying.md
+  - Transactions: transactions.md
+  - Indexes: indexes.md
+  - Permissions: permissions.md
+  - Backup and Restore: backup-and-restore.md
+  - Running the Server: running-the-server.md
+  - The Honest Limits: the-honest-limits.md
+  - Troubleshooting: troubleshooting.md
+  - Glossary: glossary.md
+  - Writing Criteria: criteria.md
